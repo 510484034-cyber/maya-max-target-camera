@@ -13,7 +13,7 @@ import sys
 
 import maya.cmds as cmds
 
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 # Native Maya camera locatorScale and locator half-extent both default to 1.
 DEFAULT_CAMERA_ICON_SCALE = 1.0
 DEFAULT_TARGET_HALF_EXTENT = 1.0

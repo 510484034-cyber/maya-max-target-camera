@@ -12,9 +12,15 @@ python tools/build_release.py
 - `test_drag_direction.py`: 11 tests of target-first placement callbacks using fake Maya commands. Covers first and repeated drag, perspective/orthographic projection, release, cancel, zero distance, non-left input, and labels.
 - `test_display_and_tangents.py`: 13 policy checks for display-only writes, legacy normalization, rollback/refusal safeguards, reading Maya defaults and preserving existing key tangents.
 - `test_installer.py`: 5 filesystem tests against temporary directories. Checks existing startup/env preservation, managed backups, rejection of unowned module files/folders, and repeated disable/reinstall.
-- `test_public_package.py`: source syntax, archive allowlist, license inclusion, and no workstation paths in public text.
+- `test_public_package.py`: 8 checks covering source syntax, archive allowlist and license, private-path/PNG metadata guards, consistent release versions, locked camera Scale, absence of experimental R hooks, and deterministic packaging.
 
 **These are not Maya runtime tests.** The included opt-in CI example does not install or run Autodesk Maya. It is not enabled by default; copy `docs/ci-checks.example.yml` to `.github/workflows/checks.yml` to enable it with suitable repository permissions. The fake command layer cannot establish actual mouse behavior or DG evaluation.
+
+## v1.5.1 maintenance validation
+
+37 plain-Python checks pass. Runtime/installer entry points differ from v1.5.0 only in the two version constants; camera creation, display resizing, animation and installation behavior are unchanged. New checks lock in the documented scope: camera transform Scale stays locked, the unshipped R adapter is absent from runtime sources, release metadata is consistent, and repeated builds are byte-identical.
+
+No additional Maya GUI verification was run for v1.5.1. The unpublished native-R prototype was discontinued after validation crashes, is excluded from the release, and is not a supported manual smoke test. The v1.5.0 GUI evidence below is historical, not a new certification of this maintenance release or any other Maya year.
 
 ## Manually verified in Maya 2023 on Windows
 

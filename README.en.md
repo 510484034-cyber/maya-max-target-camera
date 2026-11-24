@@ -1,6 +1,6 @@
 # Maya Max Target Camera
 
-[中文](README.md) · [Download v1.5.0](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.0/maya_max_target_camera_v1.5.0.zip) · [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) · [Report an issue](https://github.com/510484034-cyber/maya-max-target-camera/issues)
+[中文](README.md) · [Download v1.5.1](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.1/maya_max_target_camera_v1.5.1.zip) · [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) · [Report an issue](https://github.com/510484034-cyber/maya-max-target-camera/issues)
 
 **A 3ds Max-style target camera workflow for Autodesk Maya.** Drag-and-drop install, independent camera and target controls, horizon locking, editable focal length and roll animation, and native Create → Cameras menu integration. The current tool UI is in Chinese.
 
@@ -18,7 +18,7 @@
 
 ## Install
 
-1. Download `maya_max_target_camera_v1.5.0.zip` from [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) and extract the complete archive.
+1. Download `maya_max_target_camera_v1.5.1.zip` from [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) and extract the complete archive.
 2. Drag the **`install_max_target_camera.py` file** from your file manager into a Maya 3D viewport. Confirm installation.
 3. Open **Create → Cameras → max目标相机**. The item starts interactive creation; its option box opens the parameter panel.
 4. In the viewport, press for the target, drag out the camera, then release.
@@ -29,9 +29,19 @@ If an already-open Maya session has not refreshed, drag **`reload_max_camera_men
 
 ![Original installation diagram, not a software screenshot: extract the release, drag the installer into Maya, then use Create > Cameras > max目标相机.](docs/images/install-guide.png)
 
-## v1.5.0: display-only scaling and native key defaults
+## v1.5.1: stable maintenance release
+
+- Retain the tested v1.5.0 target-first creation, independent camera/target controls, display-panel scaling and Maya-default key tangents. Their runtime behavior is unchanged.
+- **Native-R camera display scaling is not included.** An unpublished prototype was discontinued after crashes during validation; it was not shipped in v1.5.0 either. Camera transform Scale stays locked, and this tool does not override Maya's R tool.
+- **Resize a camera icon after creation** by selecting the camera and using the panel's display-only camera multiplier, double/halve buttons or reset. No rig recreation is needed.
+- Existing target operations are retained. Prefer the target display multiplier for display-only changes; native R edits the target's transform Scale, which is a different channel.
+- This is a scope, documentation and release-validation update, **not a new R feature or a claim to fix a crash in the previous public release**. Existing v1.5.0 users do not need to interrupt Maya for the same functionality; use the normal installer when the new version label and guide are desired.
+
+## Display scaling and default tangents (retained from v1.5.0)
 
 ![Real Maya test-panel crop: separate camera/target display multipliers, halve/double/reset buttons, and Maya-default tangent controls.](docs/images/display-controls-v1.5.png)
+
+*Existing v1.5.0 panel crop; v1.5.1 keeps the same controls. This is not a new runtime-test screenshot.*
 
 - Separate camera and target sliders / numeric multipliers, with double, halve and reset buttons. **Only display geometry changes**: no camera/target transforms, optical settings, target distance, transform Scale or animation keys are edited.
 - Camera icon defaults to native Locator Scale = 1; the target box uses native-locator reference dimensions. Neither shrinks with drag distance anymore. Native Camera and Aim uses a screen-space pivot marker instead; this tool retains a scalable box, not an identical shape.
@@ -66,9 +76,11 @@ The installer writes only its own user module and backs up its managed files dur
 
 ## Tests and packaging
 
-v1.5.0 has 11 callback tests, 13 display/key-policy tests, 5 installer tests and 4 public-package checks (33 total). In a separate Maya 2023 GUI process, 18 display/easing checks and 24 existing regressions also passed. A native mouse-drag check was also run in Maya 2023: target at press, camera at drag, camera selected on release, zero Roll, and existing camera transforms/keyframes preserved.
+v1.5.1 has 11 callback tests, 13 display/key-policy tests, 5 installer tests and 8 public-package checks (**37 total**). New checks guard version metadata, locked camera Scale, absence of the experimental adapter and deterministic archives.
 
-These are **plain Python tests**, not Maya runtime tests. An optional [GitHub Actions configuration example](docs/ci-checks.example.yml) is included but not enabled by default. See [testing scope](docs/TESTING.md) and [changelog](CHANGELOG.md).
+These are **plain Python checks**, not Maya runtime tests. The earlier v1.5.0 release passed 18 display/easing checks and 24 existing regressions in a separate Maya 2023 GUI process; target-first native mouse dragging was also verified historically. This maintenance release changes no runtime-script logic except the version constants. No new Maya GUI validation was run, and historical results are not counted as new tests.
+
+An optional [GitHub Actions configuration example](docs/ci-checks.example.yml) is included but not enabled by default. See [testing scope](docs/TESTING.md) and [changelog](CHANGELOG.md).
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v

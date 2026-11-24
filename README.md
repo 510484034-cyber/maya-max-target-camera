@@ -1,6 +1,6 @@
 # Maya Max 目标摄像机 · Maya Max Target Camera
 
-[English](README.en.md) · [下载 v1.5.0 安装包](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.0/maya_max_target_camera_v1.5.0.zip) · [完整使用说明](maya_max_target_camera/使用说明.md) · [反馈问题](https://github.com/510484034-cyber/maya-max-target-camera/issues)
+[English](README.en.md) · [下载 v1.5.1 安装包](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.1/maya_max_target_camera_v1.5.1.zip) · [完整使用说明](maya_max_target_camera/使用说明.md) · [反馈问题](https://github.com/510484034-cyber/maya-max-target-camera/issues)
 
 **把 3ds Max 风格的目标摄像机工作流带入 Autodesk Maya。** 一个可拖拽安装的 Maya Python 相机工具：独立机位、独立目标、目标点优先拖动创建、默认水平锁定、可编辑焦距与滚转动画。
 
@@ -18,7 +18,7 @@
 
 ## 下载与安装：如何把 Max 目标摄像机工具导入 Maya？
 
-1. 在 **[Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest)** 下载 `maya_max_target_camera_v1.5.0.zip`，先完整解压。
+1. 在 **[Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest)** 下载 `maya_max_target_camera_v1.5.1.zip`，先完整解压。
 2. 将解压目录里的 **`install_max_target_camera.py` 文件本身**拖进 Maya 三维视口，确认安装。
 3. 打开 **创建 → 摄影机 → max目标相机**；点击名称进入拖动创建，点击右侧小方框打开参数面板。
 4. 在视口里 **按下定目标 → 拖出相机 → 松开**，随后可用 W 移动选中的相机。
@@ -29,9 +29,19 @@
 
 ![Maya目标摄像机插件安装示意：下载并解压Release安装包，拖入install_max_target_camera.py，从创建-摄影机菜单打开max目标相机。非软件截图。](docs/images/install-guide.png)
 
-## v1.5.0：只缩放图标，缓动跟随 Maya
+## v1.5.1：稳定维护版，保留已验证操作
+
+- **保留 v1.5.0 的稳定功能**：目标点优先创建、独立机位和目标、面板显示缩放、Maya 默认缓动；本次不改变这些运行逻辑。
+- **不包含摄像机 R 手柄显示缩放**：未公开发布的原型在验证中出现闪退后已停止，不纳入正式安装包；v1.5.0 也没有包含该实验。相机真实 Scale 继续锁定，工具不接管 Maya 的 R。
+- **相机图标大小仍可在创建后调整**：选择相机 → 参数面板 → **仅显示大小 → 相机图标 ×**，也可使用 ×2、×0.5、恢复默认。无需重建相机。
+- **目标点保留现有操作**。只想调整显示大小时优先使用“目标框 ×”；原生 R 修改的是目标变换 Scale，不应混同于独立显示通道。
+- 这是稳定范围、文档和发布校验的维护更新，**不是新增 R 功能或对旧正式版作闪退修复的声明**。已使用 v1.5.0 的用户不必为相同功能中断当前 Maya 工作；需要新版标识和说明时可按上方步骤升级。
+
+## 显示缩放与默认缓动（沿用 v1.5.0）
 
 ![Maya真实测试面板局部：独立相机和目标显示倍率、显示翻倍/减半/恢复默认，以及跟随Maya默认切线的打帧入口；不含桌面或水印。](docs/images/display-controls-v1.5.png)
+
+*沿用 v1.5.0 的真实面板裁切；v1.5.1 保留同样的控件，不作为本版新实测截图。*
 
 - **独立显示缩放**：相机／目标各有滑块和数值输入，另有 ×2、×0.5、恢复默认按钮。只改变可见图形，不改变机位、目标点、旋转、物体 Scale、焦距、渲染画面或关键帧。
 - **默认不再过小**：相机图标默认为原生 camera 的 Locator Scale = 1，目标框参考原生 locator 尺寸；不再随拖动距离自动缩小。原生 Camera and Aim 的目标使用屏幕空间枢轴标记，本工具保留独立可缩放方框，外形并不完全相同。
@@ -78,9 +88,11 @@
 
 ## 验证与开发
 
-v1.5.0 包含 **11 项鼠标创建回调 + 13 项显示／切线策略 + 5 项安装器 + 4 项公开包检查，共 33 项**。在 Maya 2023 独立空场景中另外完成 **18 项显示／缓动专项 + 24 项既有 GUI 回归**。另在 Maya 2023 中进行过真实鼠标拖动验收：目标等于按下点、机位等于拖动点、松开选中相机、Roll 为 0；原有机位与关键帧保持不变。
+v1.5.1 通过 **11 项拖动回调 + 13 项显示／缓动策略 + 5 项安装器 + 8 项公开包检查，共 37 项**。新增检查覆盖版本一致性、相机 Scale 锁定、无实验接管模块和可重复构建。
 
-这些是**普通 Python 测试，不启动 Maya，也不能代替 Maya GUI 验证**。仓库另附可选 [GitHub Actions 配置示例](docs/ci-checks.example.yml)，默认未启用。[测试范围与本地运行方法](docs/TESTING.md) · [更新记录](CHANGELOG.md)
+以上均为**普通 Python 检查，不启动 Maya，也不能代替 Maya GUI 验证**。此前 v1.5.0 已在独立 Maya 2023 空场景中完成 **18 项显示／缓动专项 + 24 项既有 GUI 回归**；目标优先真实鼠标拖动也有历史验收记录。v1.5.1 除版本常量外没有改变运行脚本逻辑，本轮没有重新进行 Maya GUI 验证，不把历史结果算作新增实测。
+
+仓库另附可选 [GitHub Actions 配置示例](docs/ci-checks.example.yml)，默认未启用。[测试范围与本地运行方法](docs/TESTING.md) · [更新记录](CHANGELOG.md)
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v

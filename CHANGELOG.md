@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.1 — 2026-11-24
+- Stable maintenance release: retain the v1.5.0 camera creation, display-panel controls and Maya-default key tangents without changing runtime behavior.
+- Confirm that experimental native-R camera display scaling is not included. An unpublished prototype was discontinued after crashes in validation; it was never part of a public release.
+- Document the supported route: resize camera icons with the display panel, keep the camera transform Scale locked, and do not override Maya's R tool.
+- Keep existing target operations; distinguish transform Scale from the panel's display-only controls.
+- Refresh bilingual download/upgrade instructions and retain existing watermark-free artwork and search keywords.
+- Add four release safeguards for consistent version metadata, locked camera scale, absence of experimental hooks and deterministic packaging: 37 plain-Python checks in total.
+- Reuse the documented v1.5.0 Maya 2023 validation as historical evidence; no new Maya GUI test or additional Maya-year certification is claimed for this maintenance release.
+
 ## 1.5.0 — 2026-11-24
 - Larger, distance-independent display defaults matching native camera / locator references.
 - Separate display-only camera/target sliders, numeric multipliers, halve/double/reset buttons.
