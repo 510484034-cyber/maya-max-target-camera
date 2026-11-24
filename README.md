@@ -1,6 +1,6 @@
 # Maya Max 目标摄像机 · Maya Max Target Camera
 
-[English](README.en.md) · [下载 v1.4.1 安装包](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.4.1/maya_max_target_camera_v1.4.1.zip) · [完整使用说明](maya_max_target_camera/使用说明.md) · [反馈问题](https://github.com/510484034-cyber/maya-max-target-camera/issues)
+[English](README.en.md) · [下载 v1.5.0 安装包](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.0/maya_max_target_camera_v1.5.0.zip) · [完整使用说明](maya_max_target_camera/使用说明.md) · [反馈问题](https://github.com/510484034-cyber/maya-max-target-camera/issues)
 
 **把 3ds Max 风格的目标摄像机工作流带入 Autodesk Maya。** 一个可拖拽安装的 Maya Python 相机工具：独立机位、独立目标、目标点优先拖动创建、默认水平锁定、可编辑焦距与滚转动画。
 
@@ -12,13 +12,13 @@
 
 ![用户提供的 Maya 真实空场景截图：独立相机机位、目标小方框和连接引导线。](docs/images/maya-viewport-example.png)
 
-*用户提供的既有 rig 视口截图，仅裁切无关边缘；用于展示机位、目标与引导线，不代表新版创建过程。v1.4.1 的目标优先拖动顺序见下方原创步骤图。*
+*用户提供的既有 rig 视口截图，仅裁切无关边缘；用于展示机位、目标与引导线，不代表新版创建过程。当前版本的目标优先拖动顺序见下方原创步骤图。*
 
 ![Maya Max目标摄像机操作示意：按下鼠标固定目标点，拖出相机，松开完成，默认Roll为0。原创示意图，非软件截图。](docs/images/target-first-guide.png)
 
 ## 下载与安装：如何把 Max 目标摄像机工具导入 Maya？
 
-1. 在 **[Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest)** 下载 `maya_max_target_camera_v1.4.1.zip`，先完整解压。
+1. 在 **[Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest)** 下载 `maya_max_target_camera_v1.5.0.zip`，先完整解压。
 2. 将解压目录里的 **`install_max_target_camera.py` 文件本身**拖进 Maya 三维视口，确认安装。
 3. 打开 **创建 → 摄影机 → max目标相机**；点击名称进入拖动创建，点击右侧小方框打开参数面板。
 4. 在视口里 **按下定目标 → 拖出相机 → 松开**，随后可用 W 移动选中的相机。
@@ -29,6 +29,15 @@
 
 ![Maya目标摄像机插件安装示意：下载并解压Release安装包，拖入install_max_target_camera.py，从创建-摄影机菜单打开max目标相机。非软件截图。](docs/images/install-guide.png)
 
+## v1.5.0：只缩放图标，缓动跟随 Maya
+
+![Maya真实测试面板局部：独立相机和目标显示倍率、显示翻倍/减半/恢复默认，以及跟随Maya默认切线的打帧入口；不含桌面或水印。](docs/images/display-controls-v1.5.png)
+
+- **独立显示缩放**：相机／目标各有滑块和数值输入，另有 ×2、×0.5、恢复默认按钮。只改变可见图形，不改变机位、目标点、旋转、物体 Scale、焦距、渲染画面或关键帧。
+- **默认不再过小**：相机图标默认为原生 camera 的 Locator Scale = 1，目标框参考原生 locator 尺寸；不再随拖动距离自动缩小。原生 Camera and Aim 的目标使用屏幕空间枢轴标记，本工具保留独立可缩放方框，外形并不完全相同。
+- **旧相机也可调整**：加载新版不自动改场景；选择旧相机后用“恢复默认显示”或倍率控制即可。已动画／被驱动／锁定的显示属性不会被覆盖。
+- **默认缓动一致**：新关键帧明确采用 Maya 当前默认切线（如 Auto/Auto），不改变全局偏好；已有帧的手工切线保留。现有线性／阶梯曲线可通过需确认的按钮应用默认切线，时间和值不变，帧间运动会改变，可撤销。
+
 ## 功能
 
 | 功能 | 行为 |
@@ -38,7 +47,7 @@
 | 默认无额外翻滚 | 世界上方向锁定，Roll 初始为 0；W 移动不主动写入滚转 |
 | 可编辑滚转 | 原生 E **本地 Z 轴**、Rotate Z / Roll，可打关键帧 |
 | 可编辑镜头参数 | 原生 Focal Length、Lens、焦距面板；目标距离可在面板编辑 |
-| 精简显示 | 目标框和相机图标可分别缩放，不改变机位 |
+| 独立显示 | 相机／目标倍率、×2／×0.5／恢复默认；只改显示，不改镜头参数或动画 |
 | 原生菜单入口 | 集成在 Maya 的 Create → Cameras／创建 → 摄影机 |
 | 近距离一键创建 | 面板提供“视野内创建”，避免相机落在观察视口身后 |
 | 旧相机回正与升级 | 显式操作，保留已有动画，不在加载脚本时自动改场景 |
@@ -69,7 +78,7 @@
 
 ## 验证与开发
 
-v1.4.1 包含 **10 项鼠标创建回调单元测试 + 5 项安装器测试 + 4 项公开包检查，共 19 项**。另在 Maya 2023 中进行过真实鼠标拖动验收：目标等于按下点、机位等于拖动点、松开选中相机、Roll 为 0；原有机位与关键帧保持不变。
+v1.5.0 包含 **11 项鼠标创建回调 + 13 项显示／切线策略 + 5 项安装器 + 4 项公开包检查，共 33 项**。在 Maya 2023 独立空场景中另外完成 **18 项显示／缓动专项 + 24 项既有 GUI 回归**。另在 Maya 2023 中进行过真实鼠标拖动验收：目标等于按下点、机位等于拖动点、松开选中相机、Roll 为 0；原有机位与关键帧保持不变。
 
 这些是**普通 Python 测试，不启动 Maya，也不能代替 Maya GUI 验证**。仓库另附可选 [GitHub Actions 配置示例](docs/ci-checks.example.yml)，默认未启用。[测试范围与本地运行方法](docs/TESTING.md) · [更新记录](CHANGELOG.md)
 
@@ -86,6 +95,6 @@ Maya 目标摄像机、Maya 目标相机、Maya Max 目标摄像机、maya-max �
 
 ## 许可与图片
 
-[MIT License](LICENSE)。文档包含一张用户授权提供的真实 Maya 空场景视口截图（仅裁切），以及两张原创、无水印的步骤示意图。**示意图明确标注为非软件截图**；三张图均不包含桌面、账号、个人文件或本机路径。英文文字步骤见 [English README](README.en.md)。
+[MIT License](LICENSE)。文档包含用户授权的真实 Maya 空场景视口裁切、一张独立测试窗口中的新版面板裁切，以及两张原创、无水印的步骤示意图。**示意图明确标注为非软件截图**；所有图片均不包含桌面、账号、个人文件或本机路径。英文文字步骤见 [English README](README.en.md)。
 
 本项目为独立社区工具，与 Autodesk 无隶属或背书关系；Maya、3ds Max 名称仅用于说明适用软件和工作流。

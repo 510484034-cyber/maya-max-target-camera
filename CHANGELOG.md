@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.0 — 2026-11-24
+- Larger, distance-independent display defaults matching native camera / locator references.
+- Separate display-only camera/target sliders, numeric multipliers, halve/double/reset buttons.
+- Preserve transforms, optical settings and animation; reject keyed/driven/locked display overrides.
+- Normalize older tiny targets without recreating their rig; evaluate display bounds for picking.
+- New keys explicitly follow current Maya tangent defaults; existing manual tangents stay intact.
+- Add an opt-in, confirmed and undoable direct-curve tangent conversion; refuse shared/reference/custom drivers.
+- 33 plain-Python checks, 18 new Maya 2023 feature checks and 24 existing GUI regressions passed.
+
+
 ## 1.4.1 — 2026-11-24
 - Correct interactive creation order: mouse press anchors the target; dragging positions the camera.
 - Keep the target fixed during preview updates; select the camera on release.

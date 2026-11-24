@@ -13,7 +13,7 @@ import os
 import shutil
 import sys
 
-VERSION = "1.4.1"
+VERSION = "1.5.0"
 MODULE_NAME = "MaxTargetCamera"
 MARKER = "managed-by-max-target-camera-installer-v1"
 BASE = os.path.dirname(os.path.abspath(__file__))

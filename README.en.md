@@ -1,6 +1,6 @@
 # Maya Max Target Camera
 
-[中文](README.md) · [Download v1.4.1](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.4.1/maya_max_target_camera_v1.4.1.zip) · [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) · [Report an issue](https://github.com/510484034-cyber/maya-max-target-camera/issues)
+[中文](README.md) · [Download v1.5.0](https://github.com/510484034-cyber/maya-max-target-camera/releases/download/v1.5.0/maya_max_target_camera_v1.5.0.zip) · [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) · [Report an issue](https://github.com/510484034-cyber/maya-max-target-camera/issues)
 
 **A 3ds Max-style target camera workflow for Autodesk Maya.** Drag-and-drop install, independent camera and target controls, horizon locking, editable focal length and roll animation, and native Create → Cameras menu integration. The current tool UI is in Chinese.
 
@@ -18,7 +18,7 @@
 
 ## Install
 
-1. Download `maya_max_target_camera_v1.4.1.zip` from [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) and extract the complete archive.
+1. Download `maya_max_target_camera_v1.5.0.zip` from [Releases](https://github.com/510484034-cyber/maya-max-target-camera/releases/latest) and extract the complete archive.
 2. Drag the **`install_max_target_camera.py` file** from your file manager into a Maya 3D viewport. Confirm installation.
 3. Open **Create → Cameras → max目标相机**. The item starts interactive creation; its option box opens the parameter panel.
 4. In the viewport, press for the target, drag out the camera, then release.
@@ -28,6 +28,15 @@ Do not drag from inside the ZIP, copy just one script, or overwrite your own `us
 If an already-open Maya session has not refreshed, drag **`reload_max_camera_menu.py`** into the viewport. Keep `load_menu_now.py` beside it.
 
 ![Original installation diagram, not a software screenshot: extract the release, drag the installer into Maya, then use Create > Cameras > max目标相机.](docs/images/install-guide.png)
+
+## v1.5.0: display-only scaling and native key defaults
+
+![Real Maya test-panel crop: separate camera/target display multipliers, halve/double/reset buttons, and Maya-default tangent controls.](docs/images/display-controls-v1.5.png)
+
+- Separate camera and target sliders / numeric multipliers, with double, halve and reset buttons. **Only display geometry changes**: no camera/target transforms, optical settings, target distance, transform Scale or animation keys are edited.
+- Camera icon defaults to native Locator Scale = 1; the target box uses native-locator reference dimensions. Neither shrinks with drag distance anymore. Native Camera and Aim uses a screen-space pivot marker instead; this tool retains a scalable box, not an identical shape.
+- Existing rigs are unchanged on reload. Use the display controls or reset explicitly; keyed, driven or locked display settings are refused rather than overwritten.
+- New keys explicitly follow the current Maya tangent defaults, including user-selected Linear/Step settings. Existing hand-edited key tangents and global preferences remain untouched. An opt-in, confirmed command can convert direct rig curves to the current defaults without changing key times/values. Inter-frame motion changes, and the operation is undoable.
 
 ## Features and controls
 
@@ -57,7 +66,7 @@ The installer writes only its own user module and backs up its managed files dur
 
 ## Tests and packaging
 
-v1.4.1 has 10 callback unit tests, 5 installer tests and 4 public-package checks (19 total). A native mouse-drag check was also run in Maya 2023: target at press, camera at drag, camera selected on release, zero Roll, and existing camera transforms/keyframes preserved.
+v1.5.0 has 11 callback tests, 13 display/key-policy tests, 5 installer tests and 4 public-package checks (33 total). In a separate Maya 2023 GUI process, 18 display/easing checks and 24 existing regressions also passed. A native mouse-drag check was also run in Maya 2023: target at press, camera at drag, camera selected on release, zero Roll, and existing camera transforms/keyframes preserved.
 
 These are **plain Python tests**, not Maya runtime tests. An optional [GitHub Actions configuration example](docs/ci-checks.example.yml) is included but not enabled by default. See [testing scope](docs/TESTING.md) and [changelog](CHANGELOG.md).
 
@@ -70,6 +79,6 @@ The release ZIP contains only six runtime/install scripts, the user guide, and t
 
 ## License and artwork
 
-[MIT](LICENSE). Documentation includes one authorized real Maya blank-scene viewport crop, plus two original watermark-free step diagrams clearly labeled **not software screenshots**. No generative editing was applied to the real screenshot. All three images exclude desktop content, personal data and local workstation paths. The Chinese image captions are covered by the English steps above.
+[MIT](LICENSE). Documentation includes one authorized real Maya blank-scene viewport crop, a new-panel crop from a dedicated blank test process, plus two original watermark-free step diagrams clearly labeled **not software screenshots**. No generative editing was applied to the real screenshot. All images exclude desktop content, personal data and local workstation paths. The Chinese image captions are covered by the English steps above.
 
 Independent community project; not affiliated with or endorsed by Autodesk. Product names identify intended compatibility and workflow only.

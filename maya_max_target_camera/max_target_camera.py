@@ -13,7 +13,10 @@ import sys
 
 import maya.cmds as cmds
 
-VERSION = "1.4.1"
+VERSION = "1.5.0"
+# Native Maya camera locatorScale and locator half-extent both default to 1.
+DEFAULT_CAMERA_ICON_SCALE = 1.0
+DEFAULT_TARGET_HALF_EXTENT = 1.0
 MIN_TARGET_YEAR = 2018
 MAX_TARGET_YEAR = 2026
 REQUIRED_NODE_TYPES = ("transform", "camera", "nurbsCurve", "aimConstraint",
@@ -259,9 +262,11 @@ def selection_center():
     return tuple((bbox[i] + bbox[i + 3]) * 0.5 for i in range(3))
 
 
-def _proxy(node, name, source, label):
+def _proxy(node, name, source, label, keyable=True):
     """A native proxy leaves the real camera parameter editable in the AE."""
-    cmds.addAttr(node, longName=name, niceName=label, proxy=source, keyable=True)
+    cmds.addAttr(node, longName=name, niceName=label, proxy=source, keyable=keyable)
+    if not keyable:
+        cmds.setAttr(node + "." + name, channelBox=True)
 
 
 def _scene_up():
@@ -365,7 +370,8 @@ def _target_display(target, camera, stem, created):
     geometry = cmds.createNode("transformGeometry", name=stem + "_TargetDisplayGeometry")
     created.append(geometry)
     cmds.addAttr(target, longName="displaySize", niceName="Target Size",
-                 attributeType="double", minValue=0.001, defaultValue=1.0, keyable=True)
+                 attributeType="double", minValue=0.001, defaultValue=1.0, keyable=False)
+    cmds.setAttr(target + ".displaySize", channelBox=True)
     for axis in "XYZ":
         cmds.connectAttr(target + ".displaySize", matrix + ".inputScale" + axis)
     cmds.connectAttr(base + ".local", geometry + ".inputGeometry")
@@ -373,7 +379,7 @@ def _target_display(target, camera, stem, created):
     cmds.connectAttr(geometry + ".outputGeometry", display + ".create")
     # Ensure immediate bbox/selection queries see evaluated curve data.
     cmds.getAttr(display + ".spans")
-    _proxy(camera, "targetSize", target + ".displaySize", "Target Size")
+    _proxy(camera, "targetSize", target + ".displaySize", "Target Display Size", keyable=False)
     return [matrix, geometry]
 
 
@@ -407,7 +413,7 @@ def create_camera(name="MaxTarget", camera_position=None, target_position=None,
         raise ValueError("焦距必须是至少 0.1 毫米的有限数值。")
     stem = _name_stem(name)
     size = max(distance * 0.008, 0.0001)
-    target_size = max(distance * 0.004, 0.0001)
+    target_size = DEFAULT_TARGET_HALF_EXTENT
     created = []
     skipped_camera_attrs = []
     old_selection = cmds.ls(selection=True, long=True) or []
@@ -444,7 +450,7 @@ def create_camera(name="MaxTarget", camera_position=None, target_position=None,
                 cmds.setAttr(shape + ".filmRollValue", 0)
             cmds.setAttr(shape + ".focalLength", lens)
             cmds.setAttr(shape + ".renderable", False)
-            cmds.setAttr(shape + ".locatorScale", size)
+            cmds.setAttr(shape + ".locatorScale", DEFAULT_CAMERA_ICON_SCALE)
 
             corners = [(-1,-1,-1), (-1,-1,1), (1,-1,1), (1,-1,-1), (-1,-1,-1),
                        (-1,1,-1), (-1,1,1), (-1,-1,1), (-1,1,1), (1,1,1),
@@ -469,7 +475,7 @@ def create_camera(name="MaxTarget", camera_position=None, target_position=None,
             aim_nodes = _aim_with_editable_roll(root, camera, target, up, stem, created, keep_horizon)
             _proxy(camera, "roll", camera + ".rotateZ", "Roll")
             _proxy(camera, "lens", shape + ".focalLength", "Lens (mm)")
-            _proxy(camera, "iconScale", shape + ".locatorScale", "Camera Icon Scale")
+            _proxy(camera, "iconScale", shape + ".locatorScale", "Camera Icon Scale", keyable=False)
             display_nodes = _target_display(target, camera, stem, created)
             _color(target, (0.35, 1.0, 0.4), 14)
             measurement = cmds.createNode("distanceBetween", name=stem + "_Distance")
@@ -644,6 +650,103 @@ def parameters(node):
             "version": cmds.getAttr(info["root"] + "." + TAG)}
 
 
+def _target_base_half_extent(info):
+    """Read the unscaled curve, so old distance-sized targets can be normalized.
+
+    Object-space CV queries exclude controller transforms. We never rescale the
+    transform, the rig, the aim point, or the camera's optical cameraScale.
+    """
+    if not cmds.attributeQuery("displaySize", node=info["target"], exists=True):
+        raise ValueError("旧目标没有独立显示控制，请先升级相机；不会修改物体 Scale。")
+    shapes = cmds.listRelatives(info["target"], shapes=True, fullPath=True) or []
+    base = [shape for shape in shapes if cmds.nodeType(shape) == "nurbsCurve"
+            and cmds.getAttr(shape + ".intermediateObject")]
+    if len(base) != 1:
+        raise ValueError("目标显示曲线已被自定义，不能安全计算显示倍率。")
+    points = cmds.xform(base[0] + ".cv[*]", query=True, objectSpace=True, translation=True)
+    if not points or len(points) % 3:
+        raise ValueError("无法读取目标显示曲线；未改动相机。")
+    radius = max((max(points[axis::3]) - min(points[axis::3])) * 0.5
+                 for axis in range(3))
+    if not _is_finite(radius) or radius <= 0:
+        raise ValueError("目标显示曲线大小无效；未改动相机。")
+    return radius
+
+
+def display_scales(node):
+    """Return display multipliers relative to a native-size camera / locator."""
+    info = rig_info(node)
+    values = {"camera": cmds.getAttr(info["shape"] + ".locatorScale")}
+    if cmds.attributeQuery("displaySize", node=info["target"], exists=True):
+        radius = _target_base_half_extent(info)
+        values["target"] = (cmds.getAttr(info["target"] + ".displaySize") *
+                            radius / DEFAULT_TARGET_HALF_EXTENT)
+    return values
+
+
+def set_display_scales(node, camera=None, target=None):
+    """Change only locatorScale / display geometry; never motion or animation.
+
+    Existing display keys/drivers/locks are rejected, not disconnected or edited.
+    Both inputs are validated before making any changes.
+    """
+    info = rig_info(node)
+    # Validate the display readback before writing even a camera-only change.
+    display_scales(node)
+    updates = []
+    for part, value in (("camera", camera), ("target", target)):
+        if value is None:
+            continue
+        value = float(value)
+        if not _is_finite(value) or value <= 0:
+            raise ValueError("显示倍率必须是大于零的有限数值。")
+        if part == "camera":
+            plug = info["shape"] + ".locatorScale"
+        else:
+            plug = info["target"] + ".displaySize"
+            value = value * DEFAULT_TARGET_HALF_EXTENT / _target_base_half_extent(info)
+            if value < 0.001:
+                raise ValueError("此目标的底层显示倍率不能小于 0.001。")
+        if (cmds.getAttr(plug, lock=True) or
+                cmds.listConnections(plug, source=True, destination=False) or
+                (cmds.keyframe(plug, query=True, keyframeCount=True) or 0)):
+            raise ValueError("显示属性已有关键帧、驱动或锁定，已保留：" + plug)
+        updates.append((plug, value, cmds.getAttr(plug)))
+    with _undo("Resize Target Camera Display Only"):
+        try:
+            for plug, value, old in updates:
+                cmds.setAttr(plug, value)
+            if target is not None:
+                # Force the display geometry to evaluate before bbox/selection
+                # queries; Maya can otherwise retain the old tiny picking box.
+                for shape in cmds.listRelatives(info["target"], shapes=True,
+                        noIntermediate=True, fullPath=True) or []:
+                    if cmds.nodeType(shape) == "nurbsCurve":
+                        cmds.pointPosition(shape + ".cv[0]", local=True)
+        except Exception:
+            for plug, value, old in reversed(updates):
+                if cmds.getAttr(plug) != old:
+                    cmds.setAttr(plug, old)
+            raise
+    return display_scales(node)
+
+
+def scale_display(node, factor):
+    factor = float(factor)
+    if not _is_finite(factor) or factor <= 0:
+        raise ValueError("显示倍率必须大于零。")
+    values = display_scales(node)
+    if "target" not in values:
+        raise ValueError("旧目标没有独立显示控制，请先升级相机。")
+    return set_display_scales(node, camera=values["camera"] * factor,
+                              target=values["target"] * factor)
+
+
+def reset_display_scales(node):
+    """Explicit reset, including older rigs whose raw displaySize=1 was tiny."""
+    return set_display_scales(node, camera=DEFAULT_CAMERA_ICON_SCALE, target=1.0)
+
+
 def set_parameter(node, parameter, value):
     info = rig_info(node)
     value = float(value)
@@ -673,9 +776,10 @@ def upgrade_rig(node):
     version = cmds.getAttr(root + "." + TAG)
     if version == VERSION:
         return info
-    if version == "1.3.0":
+    if version in ("1.3.0", "1.4.0", "1.4.1"):
         with _undo("Upgrade Max Target Camera"):
-            _ensure_horizon_control(info, False)
+            if version == "1.3.0":
+                _ensure_horizon_control(info, False)
             cmds.setAttr(root + "." + TAG, lock=False)
             cmds.setAttr(root + "." + TAG, VERSION, type="string", lock=True)
         return rig_info(root)
@@ -802,13 +906,81 @@ def upgrade_rig(node):
     return rig_info(root)
 
 
+def default_key_tangents():
+    """Read Maya's current defaults; do not write global animation preferences."""
+    result = {}
+    for flag in ("inTangentType", "outTangentType"):
+        value = cmds.keyTangent(query=True, g=True, **{flag: True})
+        result[flag] = value[0] if isinstance(value, (tuple, list)) else value
+        if not result[flag]:
+            raise ValueError("无法读取 Maya 的默认关键帧切线。")
+    return result
+
+
+def _key_specs(info):
+    translations = ["translateX", "translateY", "translateZ"]
+    rotations = ["rotateX", "rotateY", "rotateZ"]
+    # Key the actual source channels, not aliases; keep legacy roll/lens sources.
+    if cmds.getAttr(info["camera"] + ".rotateOrder") == 2:
+        camera_attrs = translations + ["rotateZ"]
+        lens_spec = (info["shape"], ["focalLength"])
+    else:
+        camera_attrs = translations + ["roll"]
+        lens_spec = (info["camera"], ["lens"])
+    return [(info["camera"], camera_attrs), lens_spec,
+            (info["target"], translations), (info["root"], translations + rotations),
+            (info["up"], rotations)]
+
+
 def key_controls(node):
+    """New keys follow native Maya defaults; existing keys keep their tangents."""
     info = rig_info(node)
+    defaults = default_key_tangents()
+    now = cmds.currentTime(query=True)
     with _undo("Key Target Camera Controls"):
-        cmds.setKeyframe(info["camera"], attribute=["tx", "ty", "tz", "roll", "lens"])
-        cmds.setKeyframe(info["target"], attribute=["tx", "ty", "tz"])
-        cmds.setKeyframe(info["root"], attribute=["tx", "ty", "tz", "rx", "ry", "rz"])
-        cmds.setKeyframe(info["up"], attribute=["rx", "ry", "rz"])
+        for target, attrs in _key_specs(info):
+            existing, new = [], []
+            for attr in attrs:
+                keyed = cmds.keyframe(target, attribute=attr, time=(now, now),
+                                     query=True, keyframeCount=True) or 0
+                (existing if keyed else new).append(attr)
+            if existing:
+                cmds.setKeyframe(target, attribute=existing)
+            if new:
+                cmds.setKeyframe(target, attribute=new, **defaults)
+    return defaults
+
+
+def apply_default_tangents(node):
+    """Explicit, undoable conversion of direct rig curves, not an auto-migration.
+
+    Values, times and global settings remain unchanged. Layered/custom drivers
+    and curves shared with unrelated channels are refused rather than guessed.
+    """
+    info = rig_info(node)
+    defaults = default_key_tangents()
+    plugs = [target + "." + attr for target, attrs in _key_specs(info) for attr in attrs]
+    allowed = set((_long(plug.split(".", 1)[0]), plug.split(".", 1)[1]) for plug in plugs)
+    curves = set()
+    for plug in plugs:
+        for source in cmds.listConnections(plug, source=True, destination=False,
+                                            plugs=True, skipConversionNodes=True) or []:
+            curve = source.split(".", 1)[0]
+            if not cmds.nodeType(curve).startswith("animCurve"):
+                raise ValueError("该控制通道有动画层或自定义驱动，请在曲线编辑器中处理：" + plug)
+            if cmds.referenceQuery(curve, isNodeReferenced=True):
+                raise ValueError("请在引用源文件中修改缓动曲线。")
+            for destination in cmds.listConnections(curve + ".output", source=False,
+                    destination=True, plugs=True, skipConversionNodes=True) or []:
+                key = (_long(destination.split(".", 1)[0]),
+                       cmds.attributeName(destination, long=True))
+                if key not in allowed:
+                    raise ValueError("动画曲线还驱动其他参数，已保留：" + curve)
+            curves.add(curve)
+    with _undo("Apply Maya Default Camera Tangents"):
+        if curves:
+            cmds.keyTangent(sorted(curves), edit=True, **defaults)
+    return {"curves": len(curves), "defaults": defaults}
 
 
 def delete_rig(node):
@@ -970,9 +1142,8 @@ class _DrawCamera(object):
                 self.preview_distance = distance
             else:
                 cmds.xform(self.info["camera"], worldSpace=True, translation=camera)
-                # Resize the two preview icons with the actual drawn separation.
-                cmds.setAttr(self.info["camera"] + ".targetSize", distance/self.preview_distance)
-                cmds.setAttr(self.info["shape"] + ".locatorScale", max(distance*0.008, 0.0001))
+                # Icon size is display-only and independent of the drag distance.
+                # Do not resize or key either display as the camera moves.
             cmds.draggerContext(DRAW_CONTEXT, edit=True, drawString="目标 → 机位")
             cmds.refresh(currentView=True)
         except Exception as error:
@@ -1031,6 +1202,7 @@ class _ToolUI(object):
     def __init__(self):
         self.uuids = []
         self.parameter_fields = {}
+        self.display_fields = {}
         self.reading_parameters = False
         if cmds.window(WINDOW, exists=True):
             cmds.deleteUI(WINDOW)
@@ -1053,18 +1225,33 @@ class _ToolUI(object):
         cmds.button(label="刷新列表 / 参数", command=self.callback(self.refresh))
         cmds.button(label="识别所选相机 / 目标", command=self.callback(self.from_selection))
         cmds.setParent("..")
-        cmds.frameLayout(label="镜头与显示参数（可直接调整）", collapsable=False, marginWidth=5)
+        cmds.frameLayout(label="镜头参数（影响取景）", collapsable=False, marginWidth=5)
         cmds.columnLayout(adjustableColumn=True, rowSpacing=3)
         unit = cmds.currentUnit(query=True, linear=True)
         angle = cmds.currentUnit(query=True, angle=True)
         for key, label, value in (("lens", "焦距（mm）", 35),
                                    ("roll", "滚转（{}）".format(angle), 0),
-                                   ("distance", "目标距离（{}）".format(unit), 10),
-                                   ("targetSize", "目标框缩放", 1),
-                                   ("iconScale", "相机图标缩放", 1)):
+                                   ("distance", "目标距离（{}）".format(unit), 10)):
             self.parameter_fields[key] = cmds.floatFieldGrp(
                 label=label, numberOfFields=1, value1=value, precision=4,
                 columnWidth2=(130, 190), changeCommand=self.callback(self.edit_parameter, key))
+        cmds.setParent(".."); cmds.setParent("..")
+        cmds.frameLayout(label="仅显示大小（不改取景、变换或关键帧）", collapsable=False, marginWidth=5)
+        cmds.columnLayout(adjustableColumn=True, rowSpacing=5)
+        for part, label in (("camera", "相机图标 ×"), ("target", "目标框 ×")):
+            self.display_fields[part] = cmds.floatSliderGrp(
+                label=label, field=True, minValue=0.05, maxValue=10,
+                fieldMinValue=0.001, fieldMaxValue=10000, value=1, precision=3,
+                columnWidth3=(100, 74, 175), adjustableColumn=3,
+                annotation="只缩放显示图形；滑块松开生效，也可输入更大倍率。",
+                changeCommand=self.callback(self.edit_display, part))
+        cmds.rowLayout(numberOfColumns=3, adjustableColumn=3, columnWidth3=(95, 95, 158))
+        cmds.button(label="显示 ×0.5", command=self.callback(self.resize_display, 0.5))
+        cmds.button(label="显示 ×2", command=self.callback(self.resize_display, 2.0))
+        cmds.button(label="恢复默认显示", command=self.callback(self.reset_display))
+        cmds.setParent("..")
+        cmds.text(label="仅方便看见 / 选中；不会改变机位、目标点、焦距或物体 Scale。",
+                  align="left", height=23)
         cmds.setParent(".."); cmds.setParent("..")
         for left, right in ((("选机位 / W 移动", "camera"), ("选目标 / W 移动", "target")),
                             (("选整体 / E 环绕", "root"), ("手动 UP（取消水平锁）", "up"))):
@@ -1074,8 +1261,13 @@ class _ToolUI(object):
             cmds.setParent("..")
         cmds.rowLayout(numberOfColumns=2, adjustableColumn=1, columnWidth2=(181, 181))
         cmds.button(label="从相机观看", command=self.callback(self.look))
-        cmds.button(label="给控制器打关键帧", command=self.callback(self.apply, key_controls))
+        cmds.button(label="按 Maya 默认缓动打帧", command=self.callback(self.apply, key_controls))
         cmds.setParent("..")
+        defaults = default_key_tangents()
+        self.tangent_status = cmds.text(
+            label="当前 Maya 默认切线：{} / {}（跟随 Maya，不改全局）".format(
+                defaults["inTangentType"], defaults["outTangentType"]), align="left", height=23)
+        cmds.button(label="已有关键帧：应用 Maya 默认切线…", command=self.callback(self.smooth_existing))
         cmds.button(label="修复移动翻滚 / 回正（保留滚转关键帧）",
                     command=self.callback(self.relevel))
         cmds.button(label="升级当前旧版相机（保留动画 / 可撤销）",
@@ -1110,11 +1302,45 @@ class _ToolUI(object):
         self.reading_parameters = True
         try:
             for key, control in self.parameter_fields.items():
-                editable = key not in ("targetSize", "iconScale") or cmds.attributeQuery(
-                    key, node=info["camera"], exists=True)
-                cmds.floatFieldGrp(control, edit=True, value1=values[key], enable=editable)
+                cmds.floatFieldGrp(control, edit=True, value1=values[key])
+            try:
+                display = display_scales(info["root"])
+            except ValueError:
+                display = {"camera": values["iconScale"]}
+            for part, control in self.display_fields.items():
+                cmds.floatSliderGrp(control, edit=True, enable=part in display,
+                                    value=display.get(part, 1.0))
+            defaults = default_key_tangents()
+            cmds.text(self.tangent_status, edit=True,
+                      label="当前 Maya 默认切线：{} / {}（跟随 Maya，不改全局）".format(
+                          defaults["inTangentType"], defaults["outTangentType"]))
         finally:
             self.reading_parameters = False
+
+    def edit_display(self, part):
+        if not self.reading_parameters:
+            value = cmds.floatSliderGrp(self.display_fields[part], query=True, value=True)
+            set_display_scales(self.active(), **{part: value})
+            self.read_parameters()
+
+    def resize_display(self, factor):
+        scale_display(self.active(), factor)
+        self.read_parameters()
+
+    def reset_display(self):
+        reset_display_scales(self.active())
+        self.read_parameters()
+
+    def smooth_existing(self):
+        defaults = default_key_tangents()
+        answer = cmds.confirmDialog(title="仅修改当前镜头的动画切线",
+            message="将当前相机 / 目标 / 整体 / UP 的直接动画曲线设为 {} / {}。\n"
+                    "不改关键帧时间或数值；会改变帧间运动，可撤销。\n"
+                    "不支持引用、动画层或共享外部曲线；不改 Maya 全局设置。".format(
+                        defaults["inTangentType"], defaults["outTangentType"]),
+            button=["应用", "取消"], defaultButton="取消", cancelButton="取消", dismissString="取消")
+        if answer == "应用":
+            return apply_default_tangents(self.active())
 
     def edit_parameter(self, key):
         if not self.reading_parameters:

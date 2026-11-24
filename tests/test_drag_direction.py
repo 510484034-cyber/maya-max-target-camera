@@ -90,6 +90,10 @@ class TargetFirstTests(unittest.TestCase):
             self.assertEqual(self.c.nodes['cam'],tool._draw_world_point(self.layout,p))
         self.assertEqual(self.c.moves,['cam']*3)
         self.assertEqual(len(self.c.creates),1)
+    def test_drag_does_not_resize_display_with_distance(self):
+        self.draw()
+        self.c.pointer=(10.0,5.0,9.0);self.d.drag()
+        self.assertFalse(self.c.attrs)
     def test_release_selects_camera_and_restores_move_tool(self):
         self.draw();self.d.release()
         self.assertEqual(self.c.selection,['cam'])

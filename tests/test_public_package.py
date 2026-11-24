@@ -38,7 +38,7 @@ class PublicPackageTests(unittest.TestCase):
                 self.assertIsNone(private_path.search(file.read_text(encoding='utf-8-sig')), str(file.relative_to(ROOT)))
 
     def test_public_images_have_no_embedded_text_metadata(self):
-        for name in ('target-first-guide.png', 'install-guide.png', 'maya-viewport-example.png'):
+        for name in ('target-first-guide.png', 'install-guide.png', 'maya-viewport-example.png', 'display-controls-v1.5.png'):
             payload = (ROOT / 'docs/images' / name).read_bytes()
             self.assertEqual(payload[:8], b'\x89PNG\r\n\x1a\n')
             offset = 8
